@@ -258,8 +258,6 @@ function renderSheet(c) {
     <div class="links">
       ${c.wiki ? `<a href="https://ja.wikipedia.org/wiki/${encodeURIComponent(c.wiki)}" target="_blank" rel="noopener">📖 ウィキペディア</a>` : ''}
       <a href="${google(c.ja)}" target="_blank" rel="noopener">🔍 Googleで検索</a>
-      <a href="${google(c.ja, true)}" target="_blank" rel="noopener">🖼 Google画像</a>
-      ${c.cap[0] ? `<a href="${google(c.ja + ' ' + c.cap[0])}" target="_blank" rel="noopener">🏛 首都${esc(c.cap[0])}を検索</a>` : ''}
     </div>
     ${STANDALONE ? `<div class="browsersel">リンクを開くブラウザ：${Object.entries(BROWSERS).map(([k, b]) =>
       `<button data-br="${k}" class="${k === browserPref() ? 'on' : ''}">${b.label}</button>`).join('')}</div>` : ''}`;
@@ -272,7 +270,7 @@ function renderSheet(c) {
   S.querySelectorAll('[data-go]').forEach(b => b.onclick = () => select(byId[b.dataset.go], true));
   loadWiki(c);
 }
-const google = (q, img) => 'https://www.google.com/search?' + (img ? 'tbm=isch&' : '') + 'q=' + encodeURIComponent(q);
+const google = q => 'https://www.google.com/search?q=' + encodeURIComponent(q);
 const latTxt = v => (v >= 0 ? '北緯' : '南緯') + Math.abs(Math.round(v)) + '度';
 const lngTxt = v => (v >= 0 ? '東経' : '西経') + Math.abs(Math.round(v)) + '度';
 function dist(a, b) {
