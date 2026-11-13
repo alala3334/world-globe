@@ -1,0 +1,132 @@
+:root{
+  --bg:#05070f; --panel:rgba(14,18,32,.92); --line:rgba(255,255,255,.12);
+  --fg:#eef2ff; --dim:#9aa4c4; --acc:#ffcc33; --ok:#3ddc84; --ng:#ff5c6c;
+  --safe-t:env(safe-area-inset-top); --safe-b:env(safe-area-inset-bottom);
+  --safe-l:env(safe-area-inset-left); --safe-r:env(safe-area-inset-right);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  -webkit-user-select:none;user-select:none;overscroll-behavior:none}
+button{font:inherit;color:inherit;cursor:pointer}
+#globe{position:fixed;inset:0}
+
+#loading{position:fixed;inset:0;display:grid;place-items:center;font-size:18px;background:var(--bg);z-index:50;transition:opacity .5s}
+#loading.done{opacity:0;pointer-events:none}
+
+/* 上部バー */
+.topbar{position:fixed;top:calc(10px + var(--safe-t));left:calc(10px + var(--safe-l));right:calc(10px + var(--safe-r));
+  display:flex;gap:8px;z-index:10}
+.search{flex:1;position:relative;max-width:420px}
+.search svg{position:absolute;left:12px;top:50%;width:18px;height:18px;transform:translateY(-50%);fill:none;stroke:var(--dim);stroke-width:2.2;stroke-linecap:round}
+.search input{width:100%;height:44px;border-radius:22px;border:1px solid var(--line);background:var(--panel);
+  color:var(--fg);padding:0 14px 0 38px;font-size:16px;outline:none;-webkit-user-select:text;user-select:text;backdrop-filter:blur(10px)}
+.search input:focus{border-color:var(--acc)}
+#results{position:absolute;top:50px;left:0;right:0;margin:0;padding:6px;list-style:none;background:var(--panel);
+  border:1px solid var(--line);border-radius:14px;max-height:50vh;overflow:auto;backdrop-filter:blur(10px)}
+#results li{padding:10px 10px;border-radius:10px;display:flex;gap:10px;align-items:center}
+#results li:active,#results li.hl{background:rgba(255,255,255,.1)}
+#results small{color:var(--dim);margin-left:auto}
+.iconbtn{width:44px;height:44px;border-radius:22px;border:1px solid var(--line);background:var(--panel);font-size:20px;flex:none;backdrop-filter:blur(10px)}
+
+/* 表示モード */
+.modes{position:fixed;top:calc(62px + var(--safe-t));left:0;right:0;padding:0 calc(10px + var(--safe-r)) 0 calc(10px + var(--safe-l));
+  display:flex;gap:6px;overflow-x:auto;z-index:9;scrollbar-width:none}
+.modes::-webkit-scrollbar{display:none}
+.modes button,.chips button{flex:none;border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:7px 12px;font-size:13px;white-space:nowrap;backdrop-filter:blur(10px)}
+.modes button.on,.chips button.on{background:var(--acc);color:#1a1300;border-color:var(--acc);font-weight:700}
+
+.toggles{position:fixed;left:calc(10px + var(--safe-l));bottom:calc(14px + var(--safe-b));display:flex;gap:6px;z-index:8}
+.toggles label{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:6px 10px;font-size:13px;display:flex;align-items:center;gap:4px;backdrop-filter:blur(10px)}
+.toggles input{accent-color:var(--acc);margin:0}
+
+#legend{position:fixed;right:calc(10px + var(--safe-r));bottom:calc(14px + var(--safe-b));background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:8px 10px;font-size:11px;z-index:8;min-width:150px;backdrop-filter:blur(10px)}
+#legend .bar{height:10px;border-radius:5px;margin:5px 0 3px}
+#legend .ends{display:flex;justify-content:space-between;color:var(--dim)}
+#legend .sw{display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0}
+#legend .sw i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* 国名ラベル */
+.lbl{font-size:11px;font-weight:600;color:#fff;text-shadow:0 0 3px #000,0 0 6px #000;white-space:nowrap;pointer-events:none;transform:translate(-50%,-50%)}
+.lbl.big{font-size:13px}
+.lbl.cap{font-size:10px;font-weight:500;color:#ffe9a6;transform:translate(6px,-50%)}
+.lbl.cap::before{content:"";position:absolute;left:-7px;top:50%;width:5px;height:5px;margin-top:-3px;border-radius:50%;background:#ff4b4b;box-shadow:0 0 0 1.5px #fff}
+
+/* 情報シート（スマホ:下から / iPad横:右側） */
+.sheet,.panel{position:fixed;z-index:20;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;-webkit-user-select:text;user-select:text}
+.sheet{left:0;right:0;bottom:0;max-height:62vh;border-radius:20px 20px 0 0;padding:10px 18px calc(20px + var(--safe-b));animation:up .25s ease}
+.panel{left:0;right:0;bottom:0;max-height:78vh;border-radius:20px 20px 0 0;padding:14px 16px calc(20px + var(--safe-b));animation:up .25s ease}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+@media (min-width:820px){
+  .sheet,.panel{left:auto;top:calc(110px + var(--safe-t));right:calc(12px + var(--safe-r));bottom:calc(12px + var(--safe-b));width:380px;max-height:none;border-radius:20px}
+  .grip{display:none}
+}
+.grip{width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:0 auto 8px}
+.close{position:absolute;right:12px;top:10px;width:32px;height:32px;border-radius:16px;border:0;background:rgba(255,255,255,.1);font-size:14px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.panel-head h2{margin:0;font-size:18px}
+.panel-head .close{position:static}
+
+.hero{display:flex;gap:14px;align-items:center;margin:6px 40px 12px 0}
+.hero .flag{font-size:54px;line-height:1}
+.hero .flagimg{width:72px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.hero h1{margin:0;font-size:24px}
+.hero .sub{color:var(--dim);font-size:12px;margin-top:2px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.tag{font-size:11px;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cell{background:rgba(255,255,255,.05);border-radius:12px;padding:9px 11px}
+.cell.wide{grid-column:1/-1}
+.cell .k{font-size:11px;color:var(--dim)}
+.cell .v{font-size:16px;font-weight:700;margin-top:2px;line-height:1.35}
+.cell .n{font-size:11px;color:var(--acc);margin-top:2px}
+.nb{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.nb button{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:14px;padding:5px 10px;font-size:13px}
+.wiki{margin-top:14px;font-size:14px;line-height:1.75;color:#d7ddf3}
+.wiki h3{font-size:13px;color:var(--dim);margin:0 0 6px}
+.wiki a{color:var(--acc)}
+.muted{color:var(--dim)}
+
+/* ランキング */
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
+.chips.small button{padding:4px 10px;font-size:12px}
+#rankList{list-style:none;margin:8px 0 0;padding:0;counter-reset:r}
+#rankList li{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--line);counter-increment:r}
+#rankList li::before{content:counter(r);width:26px;text-align:right;color:var(--dim);font-size:13px;flex:none}
+#rankList li:nth-child(-n+3)::before{color:var(--acc);font-weight:800}
+#rankList .nm{flex:1}
+#rankList .val{font-variant-numeric:tabular-nums;font-size:13px;color:var(--dim)}
+#rankList .barw{position:relative;height:4px;background:rgba(255,255,255,.06);border-radius:2px;margin-top:4px}
+#rankList .barw i{position:absolute;left:0;top:0;bottom:0;background:var(--acc);border-radius:2px}
+
+/* クイズ */
+.qmenu{display:grid;gap:10px}
+.qmenu button{text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:14px;padding:14px}
+.qmenu b{display:block;font-size:16px}
+.qmenu span{font-size:12px;color:var(--dim)}
+.qhead{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-bottom:8px}
+.qq{font-size:20px;font-weight:800;margin:6px 0 14px;line-height:1.4}
+.qflag{font-size:96px;text-align:center;line-height:1.1}
+.qflagimg{display:block;margin:0 auto 10px;max-width:200px;max-height:130px;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.5)}
+.choices{display:grid;gap:8px}
+.choices button{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:12px;padding:13px;font-size:16px;text-align:left}
+.choices button.ok{background:rgba(61,220,132,.25);border-color:var(--ok)}
+.choices button.ng{background:rgba(255,92,108,.25);border-color:var(--ng)}
+.qres{margin-top:12px;font-size:15px;min-height:24px}
+.qres .ok{color:var(--ok);font-weight:800}
+.qres .ng{color:var(--ng);font-weight:800}
+.qbtns{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;border:0;background:var(--acc);color:#1a1300;font-weight:800;border-radius:12px;padding:13px;font-size:15px}
+.btn.ghost{background:rgba(255,255,255,.1);color:var(--fg)}
+.sel{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.sel button{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:14px;padding:6px 11px;font-size:13px}
+.sel button.on{background:var(--acc);color:#1a1300;font-weight:700}
+
+/* クイズ中に地球儀をタップする時のバナー */
+.panel.mini{max-height:none;top:auto}
+@media (min-width:820px){.panel.mini{top:auto;bottom:calc(12px + var(--safe-b))}}
+
+#toast{position:fixed;left:50%;top:calc(110px + var(--safe-t));transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);
+  padding:10px 16px;border-radius:20px;z-index:30;font-size:14px;backdrop-filter:blur(10px)}

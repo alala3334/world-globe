@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>せかい地球儀</title>
+<meta name="description" content="回して、タップして、世界の国を学べる3D地球儀">
+<meta name="theme-color" content="#05070f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="地球儀">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="icon" href="img/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="globe"></div>
+
+<header class="topbar">
+  <div class="search">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <input id="q" type="search" placeholder="国名・首都でさがす" autocomplete="off">
+    <ul id="results" hidden></ul>
+  </div>
+  <button id="btnRank" class="iconbtn" title="ランキング">🏆</button>
+  <button id="btnQuiz" class="iconbtn" title="クイズ">❓</button>
+</header>
+
+<nav class="modes" id="modes">
+  <button data-mode="photo" class="on">🛰 衛星</button>
+  <button data-mode="cont">🗺 大陸</button>
+  <button data-mode="pop">👥 人口</button>
+  <button data-mode="area">📐 面積</button>
+  <button data-mode="dens">🏙 人口密度</button>
+  <button data-mode="gdppc">💰 1人あたりGDP</button>
+</nav>
+
+<div class="toggles">
+  <label><input type="checkbox" id="tgNames" checked> 国名</label>
+  <label><input type="checkbox" id="tgCaps"> 首都</label>
+  <label><input type="checkbox" id="tgSpin"> 自転</label>
+</div>
+
+<div id="legend" hidden></div>
+
+<!-- 国の情報 -->
+<section id="sheet" class="sheet" hidden>
+  <div class="grip"></div>
+  <button class="close" id="sheetClose" aria-label="閉じる">✕</button>
+  <div id="sheetBody"></div>
+</section>
+
+<!-- ランキング -->
+<section id="rank" class="panel" hidden>
+  <div class="panel-head">
+    <h2>🏆 ランキング</h2>
+    <button class="close" data-close="rank">✕</button>
+  </div>
+  <div class="chips" id="rankTabs">
+    <button data-k="pop" class="on">人口</button>
+    <button data-k="area">面積</button>
+    <button data-k="dens">人口密度</button>
+    <button data-k="gdp">GDP</button>
+    <button data-k="gdppc">1人あたりGDP</button>
+    <button data-k="hp">最高峰</button>
+    <button data-k="nb">隣国の数</button>
+  </div>
+  <div class="chips small" id="rankOrder">
+    <button data-o="desc" class="on">多い順</button>
+    <button data-o="asc">少ない順</button>
+  </div>
+  <ol id="rankList"></ol>
+</section>
+
+<!-- クイズ -->
+<section id="quiz" class="panel" hidden>
+  <div class="panel-head">
+    <h2>❓ 地理クイズ</h2>
+    <button class="close" data-close="quiz">✕</button>
+  </div>
+  <div id="quizBody"></div>
+</section>
+
+<div id="toast" hidden></div>
+<div id="loading">🌏 地球を準備中…</div>
+
+<script src="vendor/globe.gl.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
