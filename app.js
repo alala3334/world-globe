@@ -19,6 +19,7 @@ const MODES = {
 let C = [], byId = {}, feats = [], globe;
 let mode = 'photo', selected = null, hoverD = null;
 let quiz = null; // クイズ状態
+let alt = 2.3, zoomed = false; // カメラの高さ。うんと近づいたら粗い国境線を目立たなくする
 
 /* ---------- 数値の書式 ---------- */
 function fmtNum(v, d = 0) { return v == null ? '—' : Number(v).toLocaleString('ja-JP', { maximumFractionDigits: d }); }
@@ -55,28 +56,29 @@ async function init() {
   C.forEach(c => c.hasPoly = withPoly.has(c.id));
 
   globe = Globe({ animateIn: true })($('#globe'))
-    .globeImageUrl('img/earth-blue-marble.jpg')
     .bumpImageUrl('img/earth-topology.png')
     .backgroundImageUrl('img/night-sky.png')
     .showAtmosphere(true).atmosphereColor('#6fb8ff').atmosphereAltitude(0.18)
     .polygonsData(feats)
     .polygonCapColor(capColor)
-    .polygonSideColor(() => 'rgba(0,0,0,0.25)')
-    .polygonStrokeColor(d => d === selectedFeat() ? '#ffcc33' : 'rgba(255,255,255,0.55)')
-    .polygonAltitude(d => d === selectedFeat() ? 0.03 : d === hoverD ? 0.014 : 0.006)
+    .polygonSideColor(() => zoomed ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.25)')
+    .polygonStrokeColor(d => d === selectedFeat() ? '#ffcc33' : zoomed ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.55)')
+    .polygonAltitude(d => zoomed ? 0.0005 : d === selectedFeat() ? 0.03 : d === hoverD ? 0.014 : 0.006)
     .polygonsTransitionDuration(250)
     .onPolygonHover(d => { hoverD = d; globe.polygonAltitude(globe.polygonAltitude()); document.body.style.cursor = d ? 'pointer' : ''; })
     .onPolygonClick(d => onPick(d.c))
     // 小さい国（境界データが無い国）は点で表示
     .pointsData(C.filter(c => !c.hasPoly && isCountry(c) && c.ll))
     .pointLat(c => c.ll[0]).pointLng(c => c.ll[1])
-    .pointColor(c => c === selected ? '#ffcc33' : '#ff7b54').pointAltitude(0.01).pointRadius(0.35)
+    .pointColor(c => c === selected ? '#ffcc33' : '#ff7b54').pointAltitude(0.01).pointRadius(() => 0.35 * Math.min(1, Math.max(0.08, alt / 1.2)))
     .onPointClick(c => onPick(c))
     .htmlElementsData([])
     .htmlLat(d => d.lat).htmlLng(d => d.lng).htmlAltitude(0.012)
     .htmlElement(d => d.el)
-    .onGlobeClick(() => { if (!quiz) closeSheet(); });
+    .onGlobeClick(() => { if (!quiz) closeSheet(); })
+    .onZoom(onZoom);
 
+  applyBase();
   globe.pointOfView({ lat: 30, lng: 135, altitude: 2.3 });
   const ctr = globe.controls();
   ctr.autoRotateSpeed = 0.35;
@@ -88,6 +90,14 @@ async function init() {
   setTimeout(() => $('#loading').classList.add('done'), 600);
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+function onZoom(pov) {
+  const a = Math.round(pov.altitude * 20) / 20;
+  if (a === Math.round(alt * 20) / 20) return;
+  alt = pov.altitude;
+  const z = alt < 0.35;
+  if (z !== zoomed) { zoomed = z; globe.polygonSideColor(globe.polygonSideColor()); refreshColors(); }
+  globe.pointRadius(globe.pointRadius());
 }
 function fit() { globe.width(innerWidth).height(innerHeight); }
 function selectedFeat() { return selected ? feats.find(f => f.c === selected) : null; }
@@ -128,11 +138,23 @@ function setMode(m) {
   mode = m;
   document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
   buildScale();
-  globe.globeImageUrl(m === 'photo' ? 'img/earth-blue-marble.jpg' : null)
-    .globeMaterial().color?.set(m === 'photo' ? '#ffffff' : '#0b2547');
+  applyBase();
   refreshColors();
   drawLegend();
 }
+// 衛星写真：通信できる時は Esri の衛星タイル（拡大するほど細かい画像を読み込む）、
+// オフライン時は同梱の 4096px の画像を使う
+const SAT_TILES = (x, y, l) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${l}/${y}/${x}`;
+function applyBase() {
+  const photo = mode === 'photo', hd = photo && navigator.onLine;
+  globe.globeTileEngineUrl(hd ? SAT_TILES : null)
+    .globeImageUrl(photo && !hd ? 'img/earth-blue-marble.jpg' : null);
+  globe.globeMaterial().color?.set(photo ? '#ffffff' : '#0b2547');
+  $('#credit').hidden = !hd;
+}
+addEventListener('online', () => applyBase());
+addEventListener('offline', () => applyBase());
+
 function drawLegend() {
   const L = $('#legend');
   if (mode === 'photo') { L.hidden = true; return; }
@@ -228,16 +250,23 @@ function renderSheet(c) {
       <div class="cell"><div class="k">1人あたりGDP</div><div class="v">${pc ? '$' + fmtNum(pc, 0) : '—'}</div></div>
       <div class="cell wide"><div class="k">最高地点</div><div class="v">${c.hp ? esc(c.hp.name) + (c.hp.m ? `（${fmtNum(c.hp.m)} m）` : '') : '—'}</div></div>
       <div class="cell wide"><div class="k">位置</div><div class="v">${c.ll ? latTxt(c.ll[0]) + '　' + lngTxt(c.ll[1]) : '—'}</div>
-        <div class="n">${c.capLL ? '東京からの距離（首都まで）約' + fmtNum(Math.round(dist(jp.capLL, c.capLL) / 100) * 100) + ' km' : ''}</div></div>
+        <div class="n">${c.capLL && c.id !== 'JPN' ? '東京からの距離（首都まで）約' + fmtNum(Math.round(dist(jp.capLL, c.capLL) / 100) * 100) + ' km' : ''}</div></div>
       <div class="cell wide"><div class="k">となりの国（陸で接する国）${c.borders.length ? '・' + c.borders.length + 'か国' : ''}</div>
         ${nb ? `<div class="nb">${nb}</div>` : '<div class="v muted" style="font-size:14px">なし（島国など）</div>'}</div>
     </div>
-    <div class="wiki" id="wiki"><h3>📖 くわしく（ウィキペディアより）</h3><div class="muted">読み込み中…</div></div>`;
+    <div class="wiki" id="wiki"><h3>📖 くわしく（ウィキペディアより）</h3><div class="muted">読み込み中…</div></div>
+    <div class="links">
+      ${c.wiki ? `<a href="https://ja.wikipedia.org/wiki/${encodeURIComponent(c.wiki)}" target="_blank" rel="noopener">📖 ウィキペディア</a>` : ''}
+      <a href="${google(c.ja)}" target="_blank" rel="noopener">🔍 Googleで検索</a>
+      <a href="${google(c.ja, true)}" target="_blank" rel="noopener">🖼 Google画像</a>
+      ${c.cap[0] ? `<a href="${google(c.ja + ' ' + c.cap[0])}" target="_blank" rel="noopener">🏛 首都${esc(c.cap[0])}を検索</a>` : ''}
+    </div>`;
   const S = $('#sheet'); S.hidden = false; S.scrollTop = 0;
   hidePanels();
   S.querySelectorAll('[data-go]').forEach(b => b.onclick = () => select(byId[b.dataset.go], true));
   loadWiki(c);
 }
+const google = (q, img) => 'https://www.google.com/search?' + (img ? 'tbm=isch&' : '') + 'q=' + encodeURIComponent(q);
 const latTxt = v => (v >= 0 ? '北緯' : '南緯') + Math.abs(Math.round(v)) + '度';
 const lngTxt = v => (v >= 0 ? '東経' : '西経') + Math.abs(Math.round(v)) + '度';
 function dist(a, b) {
@@ -253,8 +282,7 @@ async function loadWiki(c) {
   try {
     const j = wikiCache[c.id] || (wikiCache[c.id] = await fetch('https://ja.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(c.wiki)).then(r => r.json()));
     if (selected !== c || !box()) return;
-    box().innerHTML = `<h3>📖 くわしく（ウィキペディアより）</h3><div>${esc(j.extract || '')}</div>
-      <p><a href="https://ja.wikipedia.org/wiki/${encodeURIComponent(c.wiki)}" target="_blank" rel="noopener">ウィキペディアで続きを読む →</a></p>`;
+    box().innerHTML = `<h3>📖 くわしく（ウィキペディアより）</h3><div>${esc(j.extract || '')}</div>`;
   } catch {
     if (box()) box().innerHTML = '<span class="muted">（オフラインのため説明を読み込めませんでした）</span>';
   }

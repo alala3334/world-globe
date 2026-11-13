@@ -87,6 +87,10 @@ button{font:inherit;color:inherit;cursor:pointer}
 .wiki{margin-top:14px;font-size:14px;line-height:1.75;color:#d7ddf3}
 .wiki h3{font-size:13px;color:var(--dim);margin:0 0 6px}
 .wiki a{color:var(--acc)}
+.links{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.links a{flex:1 1 calc(50% - 8px);text-align:center;text-decoration:none;color:var(--fg);background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;padding:11px 8px;font-size:14px;font-weight:600}
+.links a:active{background:rgba(255,204,51,.25)}
+#credit{position:fixed;right:calc(10px + var(--safe-r));top:calc(104px + var(--safe-t));font-size:9px;color:rgba(255,255,255,.55);z-index:7;pointer-events:none}
 .muted{color:var(--dim)}
 
 /* ランキング */
