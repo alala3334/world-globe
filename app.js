@@ -260,9 +260,15 @@ function renderSheet(c) {
       <a href="${google(c.ja)}" target="_blank" rel="noopener">🔍 Googleで検索</a>
       <a href="${google(c.ja, true)}" target="_blank" rel="noopener">🖼 Google画像</a>
       ${c.cap[0] ? `<a href="${google(c.ja + ' ' + c.cap[0])}" target="_blank" rel="noopener">🏛 首都${esc(c.cap[0])}を検索</a>` : ''}
-    </div>`;
+    </div>
+    ${STANDALONE ? `<div class="browsersel">リンクを開くブラウザ：${Object.entries(BROWSERS).map(([k, b]) =>
+      `<button data-br="${k}" class="${k === browserPref() ? 'on' : ''}">${b.label}</button>`).join('')}</div>` : ''}`;
   const S = $('#sheet'); S.hidden = false; S.scrollTop = 0;
   hidePanels();
+  S.querySelectorAll('[data-br]').forEach(b => b.onclick = () => {
+    safeSet('browser', b.dataset.br);
+    S.querySelectorAll('[data-br]').forEach(x => x.classList.toggle('on', x === b));
+  });
   S.querySelectorAll('[data-go]').forEach(b => b.onclick = () => select(byId[b.dataset.go], true));
   loadWiki(c);
 }
@@ -289,6 +295,25 @@ async function loadWiki(c) {
 }
 
 /* ---------- 検索 ---------- */
+/* ---------- 外部リンク ----------
+   ホーム画面から起動したアプリ（standalone）では、iOS は外部リンクをアプリ内の簡易ブラウザで開いてしまう。
+   x-safari-https:// などのスキームを使って、本物の Safari / Chrome に渡す。 */
+const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+const BROWSERS = {
+  safari: { label: 'Safari', url: u => u.replace(/^https:\/\//, 'x-safari-https://') },
+  chrome: { label: 'Chrome', url: u => u.replace(/^https:\/\//, 'googlechromes://') },
+  inapp:  { label: 'アプリ内', url: u => u },
+};
+const browserPref = () => BROWSERS[safeGet('browser')] ? safeGet('browser') : 'safari';
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[target=_blank]');
+  if (!a || !STANDALONE) return;
+  const pref = browserPref();
+  if (pref === 'inapp') return;
+  e.preventDefault();
+  location.href = BROWSERS[pref].url(a.href);
+});
+
 function bindUI() {
   const q = $('#q'), R = $('#results');
   let hits = [], hl = 0;

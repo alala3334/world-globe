@@ -1,5 +1,5 @@
 // オフラインでも地球儀が開けるようにアプリ本体をキャッシュする
-const CACHE = 'globe-v2';
+const CACHE = 'globe-v3';
 const CORE = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'vendor/globe.gl.min.js',
   'data/countries.json', 'data/borders.geojson', 'img/earth-blue-marble.jpg', 'img/earth-topology.png', 'img/night-sky.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE))); self.skipWaiting(); });
