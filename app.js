@@ -5,6 +5,8 @@ const $ = s => document.querySelector(s);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// 国別の色。Natural Earth の MAPCOLOR9（となり合う国が同じ色にならない番号）に対応
+const MAP_COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#8ce99a', '#38d9a9', '#4dabf7', '#9775fa', '#f783ac', '#e8c07d'];
 const CONT_COLOR = {
   'アジア': '#f4a259', 'ヨーロッパ': '#5b8def', 'アフリカ': '#e4c35a', '北アメリカ': '#e76f8a',
   '南アメリカ': '#5fd08a', 'オセアニア': '#43c6db', '南極': '#d9e2ef'
@@ -125,7 +127,7 @@ function capColor(d) {
   if (quiz && quiz.flash && quiz.flash[c.id]) return quiz.flash[c.id];
   if (c === selected) return 'rgba(255,204,51,0.55)';
   if (mode === 'photo') return d === hoverD ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0)';
-  if (mode === 'cont') return hexA(CONT_COLOR[c.cont] || '#888', d === hoverD ? 1 : 0.85);
+  if (mode === 'cont') return hexA(MAP_COLORS[(d.properties.mc || 1) - 1], d === hoverD ? 1 : 0.88);
   const m = MODES[mode], t = scale(m.f(c));
   if (t == null) return 'rgba(120,120,120,0.6)';
   const [r, g, b] = mix(m.from, m.to, t);
@@ -157,13 +159,8 @@ addEventListener('offline', () => applyBase());
 
 function drawLegend() {
   const L = $('#legend');
-  if (mode === 'photo') { L.hidden = true; return; }
+  if (mode === 'photo' || mode === 'cont') { L.hidden = true; return; }
   L.hidden = false;
-  if (mode === 'cont') {
-    L.innerHTML = Object.entries(CONT_COLOR).filter(([k]) => k !== '南極')
-      .map(([k, v]) => `<span class="sw"><i style="background:${v}"></i>${k}</span>`).join('');
-    return;
-  }
   const m = MODES[mode];
   L.innerHTML = `<b>${m.label}</b><div class="bar" style="background:linear-gradient(90deg,rgb(${m.from}),rgb(${m.to}))"></div>
     <div class="ends"><span>${m.fmt(scale.lo)}</span><span>${m.fmt(scale.hi)}</span></div>`;
@@ -259,14 +256,9 @@ function renderSheet(c) {
       ${c.wiki ? `<a href="https://ja.wikipedia.org/wiki/${encodeURIComponent(c.wiki)}" target="_blank" rel="noopener">📖 ウィキペディア</a>` : ''}
       <a href="${google(c.ja)}" target="_blank" rel="noopener">🔍 Googleで検索</a>
     </div>
-    ${STANDALONE ? `<div class="browsersel">リンクを開くブラウザ：${Object.entries(BROWSERS).map(([k, b]) =>
-      `<button data-br="${k}" class="${k === browserPref() ? 'on' : ''}">${b.label}</button>`).join('')}</div>` : ''}`;
+`;
   const S = $('#sheet'); S.hidden = false; S.scrollTop = 0;
   hidePanels();
-  S.querySelectorAll('[data-br]').forEach(b => b.onclick = () => {
-    safeSet('browser', b.dataset.br);
-    S.querySelectorAll('[data-br]').forEach(x => x.classList.toggle('on', x === b));
-  });
   S.querySelectorAll('[data-go]').forEach(b => b.onclick = () => select(byId[b.dataset.go], true));
   loadWiki(c);
 }
@@ -295,21 +287,13 @@ async function loadWiki(c) {
 /* ---------- 検索 ---------- */
 /* ---------- 外部リンク ----------
    ホーム画面から起動したアプリ（standalone）では、iOS は外部リンクをアプリ内の簡易ブラウザで開いてしまう。
-   x-safari-https:// などのスキームを使って、本物の Safari / Chrome に渡す。 */
+   x-safari-https:// スキームで本物の Safari に渡す。 */
 const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
-const BROWSERS = {
-  safari: { label: 'Safari', url: u => u.replace(/^https:\/\//, 'x-safari-https://') },
-  chrome: { label: 'Chrome', url: u => u.replace(/^https:\/\//, 'googlechromes://') },
-  inapp:  { label: 'アプリ内', url: u => u },
-};
-const browserPref = () => BROWSERS[safeGet('browser')] ? safeGet('browser') : 'safari';
 document.addEventListener('click', e => {
   const a = e.target.closest('a[target=_blank]');
   if (!a || !STANDALONE) return;
-  const pref = browserPref();
-  if (pref === 'inapp') return;
   e.preventDefault();
-  location.href = BROWSERS[pref].url(a.href);
+  location.href = a.href.replace(/^https:\/\//, 'x-safari-https://');
 });
 
 function bindUI() {
